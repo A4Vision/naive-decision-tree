@@ -4,7 +4,7 @@ from typing import Union
 import numpy as np
 
 from descision_tree import DecisionTree, LeafNode, SimpleDecisionRule, combine_two_trees
-from optimal_cut import find_cut_naive, calc_score
+from optimal_cut import calc_score, find_cut
 
 
 def select_decision_rule(x, y, params) -> Union[SimpleDecisionRule, None]:
@@ -14,7 +14,7 @@ def select_decision_rule(x, y, params) -> Union[SimpleDecisionRule, None]:
         argsort = np.argsort(x_row)
         y_sorted = y[argsort]
         x_row_sorted = x_row[argsort]
-        i, score = find_cut_naive(y_sorted, params['gamma'])
+        i, score = find_cut(y_sorted, params['gamma'])
         no_split_score = calc_score(y_sorted, params['gamma'])
         if score >= no_split_score:
             # Better not to split at this point
