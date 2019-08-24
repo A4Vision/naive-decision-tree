@@ -1,5 +1,5 @@
 import copy
-from typing import Union
+from typing import Union, Optional
 
 import numpy as np
 
@@ -7,7 +7,7 @@ from descision_tree import DecisionTree, LeafNode, SimpleDecisionRule, combine_t
 from optimal_cut import calc_score, find_cut
 
 
-def select_decision_rule(x, y, params) -> Union[SimpleDecisionRule, None]:
+def select_decision_rule(x, y, params) -> Optional[SimpleDecisionRule]:
     scores_rules = []
     for feature_i in range(x.shape[1]):
         x_row = x.T[feature_i]

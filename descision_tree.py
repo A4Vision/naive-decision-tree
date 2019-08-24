@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from typing import Callable
 
 import numpy as np
 
@@ -12,6 +13,10 @@ class Node:
     def predict(self, vals) -> float:
         pass
 
+    @abstractmethod
+    def convert(self, conversion_rule) -> 'Node':
+        pass
+
 
 class LeafNode(Node):
     def __init__(self, value):
@@ -22,6 +27,9 @@ class LeafNode(Node):
 
     def is_leaf(self) -> bool:
         return True
+
+    def convert(self, conversion_rule):
+        return LeafNode(self._value)
 
 
 class SimpleDecisionRule:
@@ -39,6 +47,12 @@ class SimpleDecisionRule:
 
     def __str__(self):
         return f"(x[{self._i}] < {self._bound:.4f})"
+
+    def get_bound(self):
+        return self._bound
+
+    def get_i(self):
+        return self._i
 
 
 class DecisionNode(Node):
@@ -65,6 +79,13 @@ class DecisionNode(Node):
     def _is_right(self, vals):
         return self._decision_rule.decide_is_right(vals)
 
+    def convert(self, conversion_rule: Callable[[SimpleDecisionRule], SimpleDecisionRule]) -> 'DecisionNode':
+        new_rule = conversion_rule(self._decision_rule)
+        res = DecisionNode(new_rule)
+        res.set_right(self._right.convert(conversion_rule))
+        res.set_left(self._left.convert(conversion_rule))
+        return res
+
 
 class DecisionTree:
     def __init__(self, root_node: Node):
@@ -88,3 +109,6 @@ def combine_two_trees(root_decision_rule: SimpleDecisionRule,
     root.set_left(tree_left.root())
     root.set_right(tree_right.root())
     return DecisionTree(root)
+
+
+
