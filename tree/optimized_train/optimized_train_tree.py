@@ -31,18 +31,25 @@ def calculate_features_scores(bins: np.ndarray, y: np.ndarray) -> np.ndarray:
     total_sum = y.sum()
     y_sq = np.square(y)
     total_sum_sq = y_sq.sum()
-    scores = []
+    optimal_scores = []
     n, k = bins.shape
     for feature_i in range(bins.shape[1]):
+        normal_bin_count = np.bincount(bins[:, feature_i])
         sums = np.bincount(bins[:, feature_i], weights=y)
         sums_sq = np.bincount(bins[:, feature_i], weights=y_sq)
         csum_sums = np.cumsum(sums)
         csum_sums_sq = np.cumsum(sums_sq)
 
-        scores_left = csum_sums_sq - 1 / k * np.square(csum_sums)
-        scores_right = (total_sum_sq - csum_sums_sq) - 1 / (n - k) * np.square(total_sum - csum_sums)
-        scores.append(np.min(scores_left + scores_right))
-    return np.array(scores)
+        div_range = np.cumsum(normal_bin_count)
+        assert div_range[-1] == n
+        scores_left = csum_sums_sq - 1 / div_range * np.square(csum_sums)
+        scores_right = (total_sum_sq - csum_sums_sq) - 1 / (n - div_range) * np.square(total_sum - csum_sums)
+        scores_sum = scores_right + scores_left
+        if np.isfinite(scores_sum).sum() == 0:
+            optimal_scores.append(9999999999)
+        else:
+            optimal_scores.append(np.nanmin(scores_sum[scores_sum != -np.inf]))
+    return np.array(optimal_scores)
 
 
 def optimized_select_decision_rule(data_view: NodeTrainDataView, params: Dict) -> Optional[SimpleDecisionRule]:
@@ -55,6 +62,7 @@ def optimized_select_decision_rule(data_view: NodeTrainDataView, params: Dict) -
     shifted_k_i = list(params['features_amounts'][1:]) + [1 / data_view.k_features()]
     for r_i, next_k_i in zip(params['lines_sample_ratios'], shifted_k_i):
         rows = data_view.sample_rows(int(np.ceil(r_i * data_view.n_rows())))
+        print('len rows', len(rows))
         bins = data_view.features_values(current_features, rows)
         assert bins.shape == (rows.shape[0], len(current_features))
         y = data_view.residue_values(rows)

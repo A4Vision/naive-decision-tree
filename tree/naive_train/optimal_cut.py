@@ -11,6 +11,18 @@ def calc_score(values, gamma):
     return np.sum((values - w_t) ** 2) + gamma * (w_t ** 2 + 1)
 
 
+def sort_by(x, values):
+    return np.array(x)[np.argsort(values)]
+
+
+def find_cut_naive_given_discrete(values, discrete, gamma):
+    sorted_values = sort_by(values, discrete)
+    scores = scores_naive(sorted_values, gamma)[1:]
+    scores[np.diff(sorted(discrete)) == 0] = np.inf
+    i = np.argmin(scores)
+    return i + 1, scores[i]
+
+
 def scores_naive(values, gamma):
     res = np.zeros(shape=values.shape[0])
     res[0] = calc_score(values, gamma)
@@ -44,10 +56,7 @@ def find_cut(values, gamma):
 
     scores_left = cs_sq_values[:-1] + (gamma / (lengths ** 2) - 1 / lengths) * cs_vals_sq[:-1]
     scores_right = r_cs_sq_values[:-1] + (gamma / (r_lengths ** 2) - 1 / r_lengths) * r_cs_vals_sq[:-1]
-    # print('fast left', scores_left)
-    # print('fast right', scores_right)
 
     scores = scores_left + scores_right + 2 * gamma
-    # print('fast', scores)
     i = np.argmin(scores)
     return i + 1, scores[i]
