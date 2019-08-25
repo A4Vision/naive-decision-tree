@@ -1,54 +1,13 @@
 import copy
-from typing import Tuple, Dict, Optional
+from typing import Dict, Optional
 
 import numpy as np
 
 from tree.descision_tree import DecisionTree, SimpleDecisionRule, LeafNode, combine_two_trees
 from tree.naive_train.train_tree import select_decision_rule
+from tree.optimized_train.data_view import NodeTrainDataView
 from tree.optimized_train.params_for_optimized import _set_defaults, print_expected_execution_statistics
 from tree.optimized_train.value_to_bins import ValuesToBins
-
-
-def _validate_indices(rows_indices: np.ndarray, target_array_length: int):
-    assert rows_indices.dtype is np.int64
-    assert rows_indices.ndim == 1
-    assert 0 <= rows_indices.max() < target_array_length
-
-
-class NodeTrainDataView:
-    def __init__(self, x: np.ndarray, y: np.ndarray, rows_indices: np.ndarray):
-        assert y.shape[0] > 0
-        assert y.shape[0] == x.shape[0]
-        _validate_indices(rows_indices, x.shape[0])
-        self._x = x
-        self._y = y
-        self._rows = rows_indices
-
-    def all_rows(self):
-        return self._rows
-
-    def n_rows(self):
-        return self._rows.shape[0]
-
-    def k_features(self):
-        return self._x.shape[1]
-
-    def sample_rows(self, n):
-        assert n <= self._rows.shape[0]
-        return np.random.choice(self._rows, n, replace=False)
-
-    def residue_values(self, rows: np.ndarray) -> np.ndarray:
-        return self._y[rows]
-
-    def features_values(self, features_list: np.ndarray, rows: np.ndarray) -> np.ndarray:
-        _validate_indices(features_list, self.k_features())
-        return self._x[rows, features_list]
-
-    def create_children_views(self, rule: SimpleDecisionRule) -> Tuple['NodeTrainDataView', 'NodeTrainDataView']:
-        decision = rule.decide_is_right_array(self._x[self._rows])
-        left_rows = self._rows[~decision]
-        right_rows = self._rows[decision]
-        return NodeTrainDataView(self._x, self._y, left_rows), NodeTrainDataView(self._x, self._y, right_rows)
 
 
 def train(x, y, params) -> DecisionTree:
@@ -62,7 +21,7 @@ def train(x, y, params) -> DecisionTree:
     assert binned_x.dtype is np.uint8
     binned_data_view = NodeTrainDataView(binned_x, y, np.arange(x.shape[0]))
     tree = train_on_binned(binned_data_view, params_copy)
-    return converter.prediction_tree(tree)
+    return converter.convert_bins_tree_to_prediction_tree(tree)
 
 
 def calculate_features_scores(bins: np.ndarray, y: np.ndarray) -> np.ndarray:
@@ -86,26 +45,26 @@ def calculate_features_scores(bins: np.ndarray, y: np.ndarray) -> np.ndarray:
     return np.array(scores)
 
 
-def optimized_select_decision_rule(x_view: NodeTrainDataView, params: Dict) -> Optional[SimpleDecisionRule]:
+def optimized_select_decision_rule(data_view: NodeTrainDataView, params: Dict) -> Optional[SimpleDecisionRule]:
     k_0 = params['features_amounts']
     assert k_0 == 1.
     r_t = params['lines_sample_ratios'][-1]
     assert r_t == 1.
     assert len(params['lines_sample_ratios']) == len(params['features_amounts'])
-    current_features = np.arange(x_view.k_features())
-    shifted_k_i = list(params['features_amounts'][1:]) + [1 / x_view.k_features()]
+    current_features = np.arange(data_view.k_features())
+    shifted_k_i = list(params['features_amounts'][1:]) + [1 / data_view.k_features()]
     for r_i, next_k_i in zip(params['lines_sample_ratios'], shifted_k_i):
-        rows = x_view.sample_rows(int(np.ceil(r_i * x_view.n_rows())))
-        bins = x_view.features_values(current_features, rows)
+        rows = data_view.sample_rows(int(np.ceil(r_i * data_view.n_rows())))
+        bins = data_view.features_values(current_features, rows)
         assert bins.shape == (rows.shape[0], len(current_features))
-        y = x_view.residue_values(rows)
+        y = data_view.residue_values(rows)
         features_scores = calculate_features_scores(bins, y)
-        next_features_amount = int(np.round(next_k_i * x_view.k_features()))
+        next_features_amount = int(np.round(next_k_i * data_view.k_features()))
         current_features = get_top_by_scores(current_features, features_scores, next_features_amount)
     assert len(current_features) == 1
-    all_rows = np.arange(x_view.n_rows())
-    return select_decision_rule(x_view.features_values(current_features, all_rows),
-                                x_view.residue_values(all_rows), params)
+    all_rows = np.arange(data_view.n_rows())
+    return select_decision_rule(data_view.features_values(current_features, all_rows),
+                                data_view.residue_values(all_rows), params)
 
 
 def get_top_by_scores(values: np.ndarray, scores: np.ndarray, k: int) -> np.ndarray:
