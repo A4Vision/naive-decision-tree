@@ -21,7 +21,7 @@ def _set_defaults(params: Dict):
 
     params.setdefault('n_bins', 256)
     # Make sure we can utilize uint8 for bins
-    assert params['n_bins'] <= 256
+    assert params['n_bins'] < 256
 
     params.setdefault('lines_sample_ratios', _default_ratios()['lines_sample_ratios'])
     params.setdefault('features_amounts', _default_ratios()['features_amounts'])

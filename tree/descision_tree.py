@@ -45,14 +45,23 @@ class SimpleDecisionRule:
         assert values.ndim == 2
         return self._bound < values.T[self._i]
 
-    def __str__(self):
-        return f"(x[{self._i}] < {self._bound:.4f})"
+    def __repr__(self):
+        return f"(x[{self._i}] <= {self._bound:.4f})"
 
     def get_bound(self):
         return self._bound
 
     def get_i(self):
         return self._i
+
+    def _tuple(self):
+        return self._bound, self._i
+
+    def __hash__(self):
+        return hash(self._tuple())
+
+    def __eq__(self, other):
+        return isinstance(other, SimpleDecisionRule) and self._tuple() == other._tuple()
 
 
 class DecisionNode(Node):

@@ -1,6 +1,6 @@
 import numpy as np
 
-import train_tree
+from tree.naive_train import train_tree
 
 
 def test_train_naive_tree():

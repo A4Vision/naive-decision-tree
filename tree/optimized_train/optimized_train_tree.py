@@ -1,12 +1,12 @@
 import copy
-from typing import Tuple, Dict, Optional, List
+from typing import Tuple, Dict, Optional
 
 import numpy as np
 
-from descision_tree import DecisionTree, SimpleDecisionRule, LeafNode, combine_two_trees
-from optimal_cut import find_cut
-from optimized_train.params_for_optimized import _set_defaults, print_expected_execution_statistics
-from train_tree import select_decision_rule
+from tree.descision_tree import DecisionTree, SimpleDecisionRule, LeafNode, combine_two_trees
+from tree.optimized_train import _set_defaults, print_expected_execution_statistics
+from tree.naive_train.train_tree import select_decision_rule
+from tree.optimized_train.value_to_bins import ValuesToBins
 
 
 def _validate_indices(rows_indices: np.ndarray, target_array_length: int):
@@ -48,31 +48,6 @@ class NodeTrainDataView:
         return NodeTrainDataView(self._x, self._y, left_rows), NodeTrainDataView(self._x, self._y, right_rows)
 
 
-class ValuesToBins:
-    def __init__(self, x: np.ndarray, n_bins: int):
-        self._x = x
-        self._n_bins = n_bins
-        self._quantiles = self._calculate_quantiles()
-        assert self._quantiles.shape == (x.shape[1], n_bins)
-
-    def _calculate_quantiles(self):
-        return np.percentile(self._x, np.arange(self._n_bins - 1) / self._n_bins, axis=1)
-
-    def get_bins(self, x):
-        assert x.shape[1] == self._x.shape[1]
-        return np.array([np.np.digitize(x[:, i], self._quantiles[i]) for i in range(self._x.shape[1])],
-                        dtype=np.uint8)
-
-    def prediction_tree(self, tree_trained_on_bins: DecisionTree) -> DecisionTree:
-        def conversion_rule(rule: SimpleDecisionRule) -> SimpleDecisionRule:
-            i = rule.get_i()
-            bound = self._quantiles[i, rule.get_bound()]
-            return SimpleDecisionRule(bound, i)
-
-        converted_root = tree_trained_on_bins.root().convert(conversion_rule)
-        return DecisionTree(converted_root)
-
-
 def train(x, y, params) -> DecisionTree:
     assert y.shape[0] > 0
     assert y.shape[0] == x.shape[0]
@@ -84,7 +59,7 @@ def train(x, y, params) -> DecisionTree:
     assert binned_x.dtype is np.uint8
     binned_data_view = NodeTrainDataView(binned_x, y, np.arange(x.shape[0]))
     tree = train_on_binned(binned_data_view, params_copy)
-    converter.prediction_tree(tree)
+    return converter.prediction_tree(tree)
 
 
 def calculate_features_scores(bins: np.ndarray, y: np.ndarray) -> np.ndarray:

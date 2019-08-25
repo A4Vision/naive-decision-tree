@@ -1,6 +1,6 @@
 import numpy as np
 
-import optimal_cut
+from tree.naive_train import optimal_cut
 
 
 def test_cumsum():

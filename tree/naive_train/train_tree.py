@@ -1,10 +1,10 @@
 import copy
-from typing import Union, Optional
+from typing import Optional
 
 import numpy as np
 
-from descision_tree import DecisionTree, LeafNode, SimpleDecisionRule, combine_two_trees
-from optimal_cut import calc_score, find_cut
+from tree.descision_tree import DecisionTree, LeafNode, SimpleDecisionRule, combine_two_trees
+from tree.naive_train.optimal_cut import calc_score, find_cut
 
 
 def select_decision_rule(x, y, params) -> Optional[SimpleDecisionRule]:
