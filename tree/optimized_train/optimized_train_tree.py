@@ -4,8 +4,8 @@ from typing import Tuple, Dict, Optional
 import numpy as np
 
 from tree.descision_tree import DecisionTree, SimpleDecisionRule, LeafNode, combine_two_trees
-from tree.optimized_train import _set_defaults, print_expected_execution_statistics
 from tree.naive_train.train_tree import select_decision_rule
+from tree.optimized_train.params_for_optimized import _set_defaults, print_expected_execution_statistics
 from tree.optimized_train.value_to_bins import ValuesToBins
 
 
@@ -23,6 +23,9 @@ class NodeTrainDataView:
         self._x = x
         self._y = y
         self._rows = rows_indices
+
+    def all_rows(self):
+        return self._rows
 
     def n_rows(self):
         return self._rows.shape[0]
@@ -111,7 +114,7 @@ def get_top_by_scores(values: np.ndarray, scores: np.ndarray, k: int) -> np.ndar
 
 def train_on_binned(x_view: NodeTrainDataView, params: Dict) -> DecisionTree:
     params_copy = copy.copy(params)
-
+    y = x_view.residue_values(x_view.all_rows())
     if params['max_depth'] == 0 or y.shape[0] == 1:
         return DecisionTree(LeafNode(np.average(y)))
     else:
