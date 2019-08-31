@@ -47,7 +47,7 @@ def test_train_tree_optimized():
     print(tree.root())
     prediction = tree.predict_many(x)
     diff = prediction - y
-    clean_diff = _drop_outliers(diff, 0.01)
+    clean_diff = _drop_outliers(diff, 0.005)
     assert np.abs(clean_diff).max() < 0.1
 
 
