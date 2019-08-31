@@ -41,6 +41,7 @@ class NodeTrainDataView:
         return self._x[rows, features_list]
 
     def create_children_views(self, rule: SimpleDecisionRule) -> Tuple['NodeTrainDataView', 'NodeTrainDataView']:
+        # TODO(Assaf): Does this operation copy the array, or does it just create a view ?
         decision = rule.decide_is_right_array(self._x[self._rows])
         left_rows = self._rows[~decision]
         right_rows = self._rows[decision]

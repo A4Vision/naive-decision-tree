@@ -19,37 +19,10 @@ def train(x, y, params) -> DecisionTree:
     converter = ValuesToBins(x, params_copy['n_bins'])
     binned_x = converter.get_bins(x)
     assert binned_x.dtype is np.uint8
-    binned_data_view = NodeTrainDataView(binned_x, y, np.arange(x.shape[0]))
+    assert binned_x.shape == x.shape
+    binned_data_view = NodeTrainDataView(binned_x, y, np.arange(binned_x.shape[0]))
     tree = train_on_binned(binned_data_view, params_copy)
     return converter.convert_bins_tree_to_prediction_tree(tree)
-
-
-def calculate_features_scores(bins: np.ndarray, y: np.ndarray) -> np.ndarray:
-    assert bins.shape[0] == y.shape[0]
-    assert bins.ndim == 2
-    assert y.ndim == 1
-    total_sum = y.sum()
-    y_sq = np.square(y)
-    total_sum_sq = y_sq.sum()
-    optimal_scores = []
-    n, k = bins.shape
-    for feature_i in range(bins.shape[1]):
-        normal_bin_count = np.bincount(bins[:, feature_i])
-        sums = np.bincount(bins[:, feature_i], weights=y)
-        sums_sq = np.bincount(bins[:, feature_i], weights=y_sq)
-        csum_sums = np.cumsum(sums)
-        csum_sums_sq = np.cumsum(sums_sq)
-
-        div_range = np.cumsum(normal_bin_count)
-        assert div_range[-1] == n
-        scores_left = csum_sums_sq - 1 / div_range * np.square(csum_sums)
-        scores_right = (total_sum_sq - csum_sums_sq) - 1 / (n - div_range) * np.square(total_sum - csum_sums)
-        scores_sum = scores_right + scores_left
-        if np.isfinite(scores_sum).sum() == 0:
-            optimal_scores.append(9999999999)
-        else:
-            optimal_scores.append(np.nanmin(scores_sum[scores_sum != -np.inf]))
-    return np.array(optimal_scores)
 
 
 def optimized_select_decision_rule(data_view: NodeTrainDataView, params: Dict) -> Optional[SimpleDecisionRule]:
@@ -82,16 +55,45 @@ def get_top_by_scores(values: np.ndarray, scores: np.ndarray, k: int) -> np.ndar
 def train_on_binned(x_view: NodeTrainDataView, params: Dict) -> DecisionTree:
     params_copy = copy.copy(params)
     y = x_view.residue_values(x_view.all_rows())
+    default_leaf_node = DecisionTree(LeafNode(np.average(y)))
     if params['max_depth'] == 0 or y.shape[0] == 1:
-        return DecisionTree(LeafNode(np.average(y)))
+        return default_leaf_node
     else:
         params_copy['max_depth'] -= 1
         decision_rule = optimized_select_decision_rule(x_view, params)
 
         if decision_rule is None:
-            return DecisionTree(LeafNode(np.average(y)))
+            return default_leaf_node
         left_view, right_view = x_view.create_children_views(decision_rule)
 
         left_tree = train_on_binned(left_view, params_copy)
         right_tree = train_on_binned(right_view, params_copy)
         return combine_two_trees(decision_rule, left_tree, right_tree)
+
+
+def calculate_features_scores(bins: np.ndarray, y: np.ndarray) -> np.ndarray:
+    assert bins.shape[0] == y.shape[0]
+    assert bins.ndim == 2
+    assert y.ndim == 1
+    total_sum = y.sum()
+    y_sq = np.square(y)
+    total_sum_sq = y_sq.sum()
+    optimal_scores = []
+    n, k = bins.shape
+    for feature_i in range(bins.shape[1]):
+        normal_bin_count = np.bincount(bins[:, feature_i])
+        sums = np.bincount(bins[:, feature_i], weights=y)
+        sums_sq = np.bincount(bins[:, feature_i], weights=y_sq)
+        csum_sums = np.cumsum(sums)
+        csum_sums_sq = np.cumsum(sums_sq)
+
+        div_range = np.cumsum(normal_bin_count)
+        assert div_range[-1] == n
+        scores_left = csum_sums_sq - 1 / div_range * np.square(csum_sums)
+        scores_right = (total_sum_sq - csum_sums_sq) - 1 / (n - div_range) * np.square(total_sum - csum_sums)
+        scores_sum = scores_right + scores_left
+        if np.isfinite(scores_sum).sum() == 0:
+            optimal_scores.append(9999999999)
+        else:
+            optimal_scores.append(np.nanmin(scores_sum[scores_sum != -np.inf]))
+    return np.array(optimal_scores)

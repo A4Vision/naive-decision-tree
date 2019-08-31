@@ -36,7 +36,7 @@ def print_expected_execution_statistics(params: Dict, n_samples: int, k_features
     speedup = naive_layer_runtime / layer_runtime
     print("Speedup:", speedup)
     print("Assuming lowest split contains N * 2 ** -(depth + 1) rows")
-    n_rows_in_samllest_split = n_samples * (2 ** -(params['max_depth'] + 1))
-    print("Expected amounts in lowest split:", n_rows_in_samllest_split * params['lines_sample_ratios'])
+    n_rows_in_smallest_split = n_samples * (2 ** -(params['max_depth'] + 1))
+    print("Expected amounts in lowest split:", n_rows_in_smallest_split * params['lines_sample_ratios'])
     print("features amounts:", k_features * params['features_amounts'])
 
