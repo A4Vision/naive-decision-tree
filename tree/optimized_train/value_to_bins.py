@@ -31,3 +31,6 @@ class ValuesToBins:
     def convert_bins_tree_to_prediction_tree(self, tree_trained_on_bins: DecisionTree) -> DecisionTree:
         converted_root = tree_trained_on_bins.root().convert(self.convert_to_values_rule)
         return DecisionTree(converted_root)
+
+    def bins_counts(self):
+        return [len(set(self._quantiles[:, i])) for i in range(self._quantiles.shape[1])]
