@@ -18,7 +18,7 @@ def train(x, y, params) -> DecisionTree:
     print_expected_execution_statistics(params_copy, x.shape[0], x.shape[1])
     converter = ValuesToBins(x, params_copy['n_bins'])
     binned_x = converter.get_bins(x)
-    assert binned_x.dtype is np.uint8
+    assert binned_x.dtype == np.uint8, binned_x.dtype
     assert binned_x.shape == x.shape
     binned_data_view = NodeTrainDataView(binned_x, y, np.arange(binned_x.shape[0]))
     tree = train_on_binned(binned_data_view, params_copy)
@@ -26,26 +26,32 @@ def train(x, y, params) -> DecisionTree:
 
 
 def optimized_select_decision_rule(data_view: NodeTrainDataView, params: Dict) -> Optional[SimpleDecisionRule]:
-    k_0 = params['features_amounts']
-    assert k_0 == 1.
+    k_0 = params['features_sample_ratios'][0]
+    assert k_0 == 1., k_0
     r_t = params['lines_sample_ratios'][-1]
     assert r_t == 1.
-    assert len(params['lines_sample_ratios']) == len(params['features_amounts'])
+    assert len(params['lines_sample_ratios']) == len(params['features_sample_ratios'])
     current_features = np.arange(data_view.k_features())
-    shifted_k_i = list(params['features_amounts'][1:]) + [1 / data_view.k_features()]
+    shifted_k_i = list(params['features_sample_ratios'][1:]) + [1 / data_view.k_features()]
+
     for r_i, next_k_i in zip(params['lines_sample_ratios'], shifted_k_i):
-        rows = data_view.sample_rows(int(np.ceil(r_i * data_view.n_rows())))
-        print('len rows', len(rows))
+        rows_amount = int(np.ceil(r_i * data_view.n_rows()))
+        rows = data_view.sample_rows(rows_amount)
+
         bins = data_view.features_values(current_features, rows)
+        print('data-size', bins.shape)
         assert bins.shape == (rows.shape[0], len(current_features))
         y = data_view.residue_values(rows)
         features_scores = calculate_features_scores(bins, y)
+
         next_features_amount = int(np.round(next_k_i * data_view.k_features()))
         current_features = get_top_by_scores(current_features, features_scores, next_features_amount)
+        print('len(current_features)', len(current_features), current_features)
     assert len(current_features) == 1
     all_rows = np.arange(data_view.n_rows())
-    return select_decision_rule(data_view.features_values(current_features, all_rows),
+    rule = select_decision_rule(data_view.features_values(current_features, all_rows),
                                 data_view.residue_values(all_rows), params)
+    return SimpleDecisionRule(rule.get_bound(), current_features[0])
 
 
 def get_top_by_scores(values: np.ndarray, scores: np.ndarray, k: int) -> np.ndarray:
@@ -63,6 +69,8 @@ def train_on_binned(x_view: NodeTrainDataView, params: Dict) -> DecisionTree:
         decision_rule = optimized_select_decision_rule(x_view, params)
 
         if decision_rule is None:
+            return default_leaf_node
+        if x_view.is_trivial_split(decision_rule):
             return default_leaf_node
         left_view, right_view = x_view.create_children_views(decision_rule)
 

@@ -18,7 +18,7 @@ class ValuesToBins:
     def get_bins(self, x):
         assert x.shape[1] == self._x.shape[1]
         return np.array([np.digitize(x[:, i], self._quantiles[:, i], True) for i in range(self._x.shape[1])],
-                        ).T
+                        dtype=np.uint8).T
 
     def convert_to_values_rule(self, bins_rule: SimpleDecisionRule) -> SimpleDecisionRule:
         i = bins_rule.get_i()

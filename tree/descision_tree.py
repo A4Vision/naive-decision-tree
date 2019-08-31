@@ -31,6 +31,9 @@ class LeafNode(Node):
     def convert(self, conversion_rule):
         return LeafNode(self._value)
 
+    def __str__(self):
+        return f"Leaf({self._value})"
+
 
 class SimpleDecisionRule:
     def __init__(self, bound, i):
@@ -94,6 +97,15 @@ class DecisionNode(Node):
         res.set_right(self._right.convert(conversion_rule))
         res.set_left(self._left.convert(conversion_rule))
         return res
+
+    def _tabify(self, string):
+        return '\n'.join(["\t" + l for l in string.splitlines()])
+
+    def __str__(self):
+        return f"""Decision({self._decision_rule})
+            {self._tabify(str(self._left))}
+            Or
+            {self._tabify(str(self._right))}"""
 
 
 class DecisionTree:
