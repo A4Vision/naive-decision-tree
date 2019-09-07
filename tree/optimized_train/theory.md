@@ -118,6 +118,17 @@ where cdf-t(?, j) is the cumulative distribution function of t distribution
 with j degrees of freedom.
 
 
+#### Minor improvement to approach 3
+Actually, we don't have n1_L samples of Normal(MU_L, VARIANCE_L),
+but n1_L samples of a random variable with expectancy MU_L
+and variance VARIANCE_L.
+
+One simple thing we can do in order to get samples of a normal variable,
+is to partition the samples into sets of size ~= 30. The sum of 30 such
+numbers indeed distributes normally. Then we have
+
+n1_L / 30 samples of Normal(30 * MU_L, 30 * VARIANCE_L)
+
 ## Future directions
 * Consider latent variance as well
 * Do not consider only worst case evaluation of the expectancy
