@@ -110,9 +110,9 @@ https://accendoreliability.com/parameters-and-tolerance-estimates/
 we get
 alpha = 1 - 90%
 
-mu1_L = Avg(x) - cdf-t(alpha / 2, n1_L - 1) * Std(x)
+mu1_L = Avg(x) + t.ppf(alpha / 2, n1_L - 1) * Std(x) / Sqrt(n)
 
-mu2_L = Avg(x) + cdf-t(1 - alpha / 2, n1_L - 1) * Std(x)
+mu2_L = Avg(x) + t.ppf(1 - alpha / 2, n1_L - 1) * Std(x) / Sqrt(n)
 
 where cdf-t(?, j) is the cumulative distribution function of t distribution
 with j degrees of freedom.
