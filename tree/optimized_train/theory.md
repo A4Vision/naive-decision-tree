@@ -102,12 +102,20 @@ We have n1_L samples of Normal(MU_L, VARIANCE_L).
 Using t-distribution, we can calculate easily what are
 the reasonable values for MU_L.
 Assume induce that it is between mu1_L and mu2_L with
-confidence=90%.
+confidence=95%.
 
-So we ass
+By using equation 1 from 
+https://accendoreliability.com/parameters-and-tolerance-estimates/
 
+we get
+alpha = 1 - 90%
 
+mu1_L = Avg(x) - cdf-t(alpha / 2, n1_L - 1) * Std(x)
 
+mu2_L = Avg(x) + cdf-t(1 - alpha / 2, n1_L - 1) * Std(x)
+
+where cdf-t(?, j) is the cumulative distribution function of t distribution
+with j degrees of freedom.
 
 
 ## Future directions
