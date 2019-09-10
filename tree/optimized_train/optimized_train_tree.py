@@ -2,7 +2,6 @@ import copy
 from typing import Dict, Optional, NamedTuple
 
 import numpy as np
-import scipy.stats
 
 from tree.descision_tree import DecisionTree, SimpleDecisionRule, LeafNode, combine_two_trees
 from tree.naive_train.train_tree import select_decision_rule
@@ -123,16 +122,9 @@ class ScoresCalculator:
         else:
             scores_sum[scores_sum == -np.inf] = np.nan
             i = np.nanargmin(scores_sum)
-            # At his point, we could manipulate i
+            # At this point, we could manipulate i
             s = scores_sum[i]
             return ScoreEstimate(s, s, s)
-
-
-def estimate_normal(avg: float, std: float, n: int, confidence: float) -> ScoreEstimate:
-    alpha = 1 - confidence
-    return ScoreEstimate(avg,
-                         avg + scipy.stats.t.ppf(alpha / 2, n - 1) * std / n ** 0.5,
-                         avg + scipy.stats.t.ppf(1 - alpha / 2, n - 1) * std / n ** 0.5)
 
 
 def calculate_features_scores(bins: np.ndarray, y: np.ndarray) -> np.ndarray:
