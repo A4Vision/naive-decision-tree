@@ -55,6 +55,34 @@ def optimized_select_decision_rule(data_view: NodeTrainDataView, params: Dict) -
     return SimpleDecisionRule(rule.get_bound(), current_features[0])
 
 
+def new_optimized_optimized_select_decision_rule(data_view: NodeTrainDataView, params: Dict) -> Optional[SimpleDecisionRule]:
+    r_t = params['lines_sample_ratios'][-1]
+    assert r_t == 1.
+    current_features = np.arange(data_view.k_features())
+
+    for r_i in params['lines_sample_ratios']:
+        rows_amount = int(np.ceil(r_i * data_view.n_rows()))
+        rows = data_view.sample_rows(rows_amount)
+        bins = data_view.features_values(current_features, rows)
+        print('data-size', bins.shape)
+        assert bins.shape == (rows.shape[0], len(current_features))
+
+        y = data_view.residue_values(rows)
+        scores_calc = ScoresCalculator(bins, y)
+
+        feature_estimations = [(feature, scores_calc.estimate_score(feature, 0.95)) for feature in current_features]
+        lowest_upper_bound = min([score.upper_bound for score in feature_estimations])
+        current_features = [feature for feature, estimation in feature_estimations if estimation.lower_bound < lowest_upper_bound]
+        print('len(current_features)', len(current_features), current_features)
+
+    assert len(current_features) == 1
+    all_rows = np.arange(data_view.n_rows())
+    rule = select_decision_rule(data_view.features_values(current_features, all_rows),
+                                data_view.residue_values(all_rows), params)
+    return SimpleDecisionRule(rule.get_bound(), current_features[0])
+
+
+
 def get_top_by_scores(values: np.ndarray, scores: np.ndarray, k: int) -> np.ndarray:
     return values[np.argsort(scores)][:k]
 
