@@ -1,5 +1,5 @@
 import copy
-from typing import Dict, Optional, NamedTuple
+from typing import Dict, Optional
 
 import numpy as np
 
@@ -7,6 +7,8 @@ from tree.descision_tree import DecisionTree, SimpleDecisionRule, LeafNode, comb
 from tree.naive_train.train_tree import select_decision_rule
 from tree.optimized_train.data_view import NodeTrainDataView
 from tree.optimized_train.params_for_optimized import _set_defaults, print_expected_execution_statistics
+from tree.optimized_train.statistics_utils import estimate_sum_of_non_normal_samples_as_sum, ScoreEstimate, \
+    estimate_sum_of_normal_samples_as_normal
 from tree.optimized_train.value_to_bins import ValuesToBins
 
 
@@ -79,12 +81,6 @@ def train_on_binned(x_view: NodeTrainDataView, params: Dict) -> DecisionTree:
         return combine_two_trees(decision_rule, left_tree, right_tree)
 
 
-class ScoreEstimate(NamedTuple):
-    value: float
-    lower_bound: float
-    upper_bound: float
-
-
 class ScoresCalculator:
     def __init__(self, bins: np.ndarray, y: np.ndarray):
         assert bins.shape[0] == y.shape[0]
@@ -104,9 +100,10 @@ class ScoresCalculator:
         assert 0 <= feature_i < self._k
         assert 0 < confidence < 1
         # O(n)
-        normal_bin_count = np.bincount(self._bins[:, feature_i])
-        sums = np.bincount(self._bins[:, feature_i], weights=self._y)
-        sums_sq = np.bincount(self._bins[:, feature_i], weights=self._y_sq)
+        values = self._bins[:, feature_i]
+        normal_bin_count = np.bincount(values)
+        sums = np.bincount(values, weights=self._y)
+        sums_sq = np.bincount(values, weights=self._y_sq)
 
         csum_sums = np.cumsum(sums)
         csum_sums_sq = np.cumsum(sums_sq)
@@ -120,11 +117,24 @@ class ScoresCalculator:
         if not np.isfinite(scores_sum).any():
             return ScoreEstimate(np.inf, np.inf, np.inf)
         else:
-            scores_sum[scores_sum == -np.inf] = np.nan
+            scores_sum[~np.isfinite(scores_sum)] = np.nan
             i = np.nanargmin(scores_sum)
-            # At this point, we could manipulate i
-            s = scores_sum[i]
-            return ScoreEstimate(s, s, s)
+            return self._calculate_estimate(values, i, scores_left[i], scores_right[i])
+
+    def _calculate_estimate(self, values: np.ndarray, bin_value: int, score_left: float, score_right: float) -> ScoreEstimate:
+        b = values <= bin_value
+        left_y = self._y[b]
+        left_estimate = estimate_sum_of_normal_samples_as_normal(
+            (left_y - np.average(left_y)) ** 2, 0.9)
+        right_y = self._y[~b]
+        right_estimate = estimate_sum_of_normal_samples_as_normal(
+            (right_y - np.average(right_y)) ** 2, 0.9)
+        # print('length', len(left_y))
+        # print('i', bin_value)
+        # print('values', left_estimate.value, score_left)
+        assert abs(left_estimate.value - score_left) < 0.0001
+        assert abs(right_estimate.value - score_right) < 0.0001
+        return right_estimate + left_estimate
 
 
 def calculate_features_scores(bins: np.ndarray, y: np.ndarray) -> np.ndarray:
@@ -134,8 +144,8 @@ def calculate_features_scores(bins: np.ndarray, y: np.ndarray) -> np.ndarray:
 
 
 """
-We need to calculate 
-VARIANCE((avg_y - y) ** 2)
+We need to calculate on the left:
+    SUM((avg_y - y) ** 2)), VARIANCE((avg_y - y) ** 2)
 
 
 we have the sum of all the y
