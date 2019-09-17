@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
 
 from tree.naive_train.optimal_cut import find_cut_naive_given_discrete
@@ -25,7 +24,7 @@ def test_calculate_features_scores():
         naive_scores = np.array([find_cut_naive_given_discrete(y, x[:, i], 0)[1] for i in range(x.shape[1])])
         # Sine in partition to bins we lose information - we might miss the optimal split.
         # Therefore the naive scores are always a little bit better than the fast bin-based method.
-        assert (scores > naive_scores -0.00001).all()
+        assert (scores > naive_scores - 0.00001).all()
         error = (scores - naive_scores) / (naive_scores + scores)
         print('n_bins=', n_bins, 'max_error=', np.max(error))
         if min(v.bins_counts()) >= range_size:
