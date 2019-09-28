@@ -2,3 +2,4 @@ numpy
 xgboost
 pytest
 matplotlib
+pandas
