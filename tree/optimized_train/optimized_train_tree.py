@@ -7,7 +7,7 @@ from tree.descision_tree import DecisionTree, SimpleDecisionRule, LeafNode, comb
 from tree.naive_train.train_tree import select_decision_rule
 from tree.optimized_train.data_view import NodeTrainDataView
 from tree.optimized_train.params_for_optimized import _set_defaults, print_expected_execution_statistics
-from tree.optimized_train.statistics_utils import estimate_sum_of_non_normal_samples_as_sum, ScoreEstimate, \
+from tree.optimized_train.statistics_utils import ScoreEstimate, \
     estimate_sum_of_normal_samples_as_normal
 from tree.optimized_train.value_to_bins import ValuesToBins
 
@@ -56,7 +56,7 @@ def optimized_select_decision_rule(data_view: NodeTrainDataView, params: Dict) -
     return SimpleDecisionRule(rule.get_bound(), current_features[0])
 
 
-def new_optimized_optimized_select_decision_rule(data_view: NodeTrainDataView, params: Dict) -> Optional[SimpleDecisionRule]:
+def select_decision_rule_using_pruning(data_view: NodeTrainDataView, params: Dict) -> Optional[SimpleDecisionRule]:
     r_t = params['lines_sample_ratios'][-1]
     assert r_t == 1.
     current_features = np.arange(data_view.k_features())
@@ -72,8 +72,9 @@ def new_optimized_optimized_select_decision_rule(data_view: NodeTrainDataView, p
         scores_calc = ScoresCalculator(bins, y)
 
         feature_estimations = [(feature, scores_calc.estimate_score(feature, 0.95)) for feature in current_features]
-        lowest_upper_bound = min([score.upper_bound for score in feature_estimations])
-        current_features = [feature for feature, estimation in feature_estimations if estimation.lower_bound < lowest_upper_bound]
+        lowest_upper_bound = min([estimation.upper_bound for feature, estimation in feature_estimations])
+        current_features = [feature for feature, estimation in feature_estimations if
+                            estimation.lower_bound < lowest_upper_bound]
         print('len(current_features)', len(current_features), current_features)
 
     assert len(current_features) == 1
@@ -81,7 +82,6 @@ def new_optimized_optimized_select_decision_rule(data_view: NodeTrainDataView, p
     rule = select_decision_rule(data_view.features_values(current_features, all_rows),
                                 data_view.residue_values(all_rows), params)
     return SimpleDecisionRule(rule.get_bound(), current_features[0])
-
 
 
 def get_top_by_scores(values: np.ndarray, scores: np.ndarray, k: int) -> np.ndarray:
@@ -149,7 +149,8 @@ class ScoresCalculator:
             i = np.nanargmin(scores_sum)
             return self._calculate_estimate(values, i, scores_left[i], scores_right[i])
 
-    def _calculate_estimate(self, values: np.ndarray, bin_value: int, score_left: float, score_right: float) -> ScoreEstimate:
+    def _calculate_estimate(self, values: np.ndarray, bin_value: int, score_left: float,
+                            score_right: float) -> ScoreEstimate:
         b = values <= bin_value
         left_y = self._y[b]
         left_estimate = estimate_sum_of_normal_samples_as_normal(
