@@ -148,17 +148,18 @@ class ScoresCalculator:
         else:
             scores_sum[~np.isfinite(scores_sum)] = np.nan
             i = np.nanargmin(scores_sum)
-            return self._calculate_estimate(values, i, scores_left[i], scores_right[i])
+            return self._calculate_estimate(values, i, scores_left[i], scores_right[i], confidence)
 
-    def _calculate_estimate(self, values: np.ndarray, bin_value: int, score_left: float,
-                            score_right: float) -> ScoreEstimate:
+    def _calculate_estimate(self, values: np.ndarray, bin_value: int, score_left: float, score_right: float,
+                            confidence: float) -> ScoreEstimate:
+        # TODO(assaf): Remove the arguments score_left and score_right
         b = values <= bin_value
         left_y = self._y[b]
         left_estimate = estimate_expectancy_of_sum_of_normal(
-            (left_y - np.average(left_y)) ** 2, 0.9)
+            (left_y - np.average(left_y)) ** 2, confidence)
         right_y = self._y[~b]
         right_estimate = estimate_expectancy_of_sum_of_normal(
-            (right_y - np.average(right_y)) ** 2, 0.9)
+            (right_y - np.average(right_y)) ** 2, confidence)
         # print('length', len(left_y))
         # print('i', bin_value)
         # print('values', left_estimate.value, score_left)
