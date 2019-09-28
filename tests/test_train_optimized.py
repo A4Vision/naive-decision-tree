@@ -3,7 +3,8 @@ import pandas as pd
 
 from tree.naive_train.optimal_cut import find_cut_naive_given_discrete
 from tree.optimized_train import optimized_train_tree
-from tree.optimized_train.optimized_train_tree import get_top_by_scores, calculate_features_scores
+from tree.optimized_train.optimized_train_tree import get_top_by_scores
+from tree.optimized_train.scores_calculator import calculate_features_scores
 from tree.optimized_train.value_to_bins import ValuesToBins
 
 
@@ -20,24 +21,18 @@ def test_calculate_features_scores():
     for n_bins in (3, 4, 7, 11, 15):
         v = ValuesToBins(x, n_bins)
         bins = v.get_bins(x)
+        assert bins.shape == x.shape
         scores = calculate_features_scores(bins, y)
-        naive_scores = np.array([find_cut_naive_given_discrete(y, x[:, i], 0)[1] for i in range(x.shape[1])])
-        # Sine in partition to bins we lose information - we might miss the optimal split.
-        # Therefore the naive scores are always a little bit better than the fast bin-based method.
+        naive_scores = np.array([find_cut_naive_given_discrete(y, bins[:, i], 0)[1] for i in range(x.shape[1])])
         assert (scores > naive_scores - 0.00001).all()
         error = (scores - naive_scores) / (naive_scores + scores)
-        print('n_bins=', n_bins, 'max_error=', np.max(error))
-        if min(v.bins_counts()) >= range_size:
-            # Number of bins is at least as the number of values - binning does not lose
-            # information.
-            print('argmax', np.argmax(error))
-            assert np.max(error) < 0.0001, n_bins
+        assert np.max(error) < 0.0001
 
 
 def test_train_tree_optimized():
-    x = np.random.normal(size=(10000, 128))
+    x = np.random.normal(size=(50000, 128))
     y = (x.T[7] > 0.1) * 5 + (x.T[2] < 0.01) * 3 + np.random.random(size=(x.shape[0])) * 0.01
-    params = {'max_depth': 4, 'gamma': 0.1}
+    params = {'max_depth': 2, 'gamma': 0.1}
     rs_log2 = np.array([8, 4., 0])
     ks_log2 = np.array([0., 2, 4])
     params.update({'lines_sample_ratios': 2 ** -rs_log2,
