@@ -74,7 +74,7 @@ def select_decision_rule_using_pruning(data_view: NodeTrainDataView, params: Dic
         feature_estimations = [(feature, scores_calc.estimate_score(feature, 0.95)) for feature in current_features]
         lowest_upper_bound = min([estimation.upper_bound for feature, estimation in feature_estimations])
         current_features = [feature for feature, estimation in feature_estimations if
-                            estimation.lower_bound < lowest_upper_bound]
+                            estimation.lower_bound <= lowest_upper_bound]
         print('len(current_features)', len(current_features), current_features)
 
     assert len(current_features) == 1
