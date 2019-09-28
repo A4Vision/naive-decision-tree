@@ -1,20 +1,24 @@
 # Fast split selection by early features pruning
 ## Preface
 
-Score_L + Score_R
+Score = Score_L + Score_R
+
 Score_L = SUM_L((f_L(x) - y) ** 2)
+
 f_L(x) = Avg_L(x)
 
 
-n, k
+Assume `n` rows, `k` features.
 
-n / 100, k
-n / 10,  k / 2,
-n / 4, k / 20,
-n, k / 50
+Assume the following split check rounds
+* `n / 100` rows, with `k` features
+* n / 10,  k / 2,
+* n / 4, k / 20,
+* n, k / 50
 
+The total running time would be:
 
-20 * (n / 100 * k + n / 10 * k / 2 + ...) << 20 * n * k
+(n / 100 * k + n / 10 * k / 2 + ...) << n * k
 
 ## Basic assumptions
 Assume we sample n1 rows and find the optimal split of a feature.
@@ -27,13 +31,13 @@ SUM_R((f_R(x) - y) ** 2)
 
 I should investigate deeply into this random variable - 
 but roughly - while assuming the decision boundary is kept
-the same when enlarging the sample - (i.e. L and R are both constants) -
-denote n1_L the number of samples in the left sum
-n1_R the number of samples in the right sum
-we get that 
+the same when enlarging the sample - (i.e. L and R are constant sets).
+Let n1_L the number of samples in the left sum.
+Let n1_R the number of samples in the right sum.
+We get that 
 
-SUM_L ~ Normal(n1_L * MU_L, n1_L * VARIANCE_L)
-SUM_R ~ Normal(n1_R * MU_R, n1_R * VARIANCE_R)
+* SUM_L ~ Normal(n1_L * MU_L, n1_L * VARIANCE_L)
+* SUM_R ~ Normal(n1_R * MU_R, n1_R * VARIANCE_R)
 
 ## Score analysis
 
@@ -97,25 +101,23 @@ Reasonable range for the log likelihood:
 
 
 
-### Approach 3: Estimating the expectancy using t-distribution 
+### Approach 3: Estimating the expectancy using t-distribution (the implemented approach) 
 We have n1_L samples of Normal(MU_L, VARIANCE_L).
 Using t-distribution, we can calculate easily what are
 the reasonable values for MU_L.
-Assume induce that it is between mu1_L and mu2_L with
+Assume that it is between mu1_L and mu2_L with
 confidence=95%.
 
 By using equation 1 from 
 https://accendoreliability.com/parameters-and-tolerance-estimates/
 
-we get
-alpha = 1 - 90%
+Denote the vector of samples as `x`
 
-mu1_L = Avg(x) + t.ppf(alpha / 2, n1_L - 1) * Std(x) / Sqrt(n)
+Denote the error `alpha = 1 - 95%`
 
-mu2_L = Avg(x) + t.ppf(1 - alpha / 2, n1_L - 1) * Std(x) / Sqrt(n)
+`mu1_L = Avg(x) + t.ppf(alpha / 2, n1_L - 1) * Std(x) / Sqrt(n)`
 
-where cdf-t(?, j) is the cumulative distribution function of t distribution
-with j degrees of freedom.
+`mu2_L = Avg(x) + t.ppf(1 - alpha / 2, n1_L - 1) * Std(x) / Sqrt(n)`
 
 
 #### Minor improvement to approach 3
