@@ -16,7 +16,7 @@ def _default_ratios():
 
 
 def _set_defaults(params: Dict):
-    params.setdefault('feature_pruning_method', 'dynamic')
+    params.setdefault('feature_pruning_method', 'scheduled')
     assert params['feature_pruning_method'] in ('dynamic', 'scheduled')
 
     params.setdefault('max_depth', 2)

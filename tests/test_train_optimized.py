@@ -3,7 +3,7 @@ import pandas as pd
 
 from tree.naive_train.optimal_cut import find_cut_naive_given_discrete
 from tree.optimized_train import optimized_train_tree
-from tree.optimized_train.optimized_train_tree import get_top_by_scores
+from tree.optimized_train.decision_rule_selection import get_top_by_scores
 from tree.optimized_train.scores_calculator import calculate_features_scores
 from tree.optimized_train.value_to_bins import ValuesToBins
 

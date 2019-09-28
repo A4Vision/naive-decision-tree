@@ -41,7 +41,7 @@ class ScheduledPruningSelector(DecisionRuleSelector):
             features_scores = calculate_features_scores(bins, y)
 
             next_features_amount = int(np.round(next_k_i * data_view.k_features()))
-            current_features = _get_top_by_scores(current_features, features_scores, next_features_amount)
+            current_features = get_top_by_scores(current_features, features_scores, next_features_amount)
             print('len(current_features)', len(current_features), current_features)
         assert len(current_features) == 1
         all_rows = np.arange(data_view.n_rows())
@@ -91,5 +91,5 @@ class DynamicPruningSelector(DecisionRuleSelector):
         return SimpleDecisionRule(rule.get_bound(), current_features[0])
 
 
-def _get_top_by_scores(values: np.ndarray, scores: np.ndarray, k: int) -> np.ndarray:
+def get_top_by_scores(values: np.ndarray, scores: np.ndarray, k: int) -> np.ndarray:
     return values[np.argsort(scores)][:k]
