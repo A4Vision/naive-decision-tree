@@ -43,28 +43,35 @@ def chunkify_padded(arr: np.ndarray, chunk_size: int) -> np.ndarray:
         yield arr[i * chunk_size: (i + 1) * chunk_size]
 
 
-def estimate_sum_of_non_normal_samples_as_sum(non_normal_samples: np.ndarray,
-                                              confidence: float, C: int = 10) -> ScoreEstimate:
+def estimate_expectancy_of_sum_of_non_normal(non_normal_samples: np.ndarray,
+                                             confidence: float, C: int = 10) -> ScoreEstimate:
     assert non_normal_samples.ndim == 1
     # Each sum of a chunk is approximately normal.
     new_samples = np.array([np.sum(chunk) for chunk in chunkify_padded(non_normal_samples, C)])
-    return estimate_mean_of_normal_from_samples(new_samples, confidence)
+    return estimate_expectancy_of_sum_of_normal(new_samples, confidence)
 
 
-def estimate_sum_of_normal_samples_as_normal(samples: np.ndarray, confidence: float) -> ScoreEstimate:
+def estimate_expectancy_of_sum_of_normal(samples: np.ndarray, confidence: float) -> ScoreEstimate:
+    """
+    :param samples: Independent samples of a normal variable.
+    :return: An estimate for the expectancy of a sum of `samples.shape[0]` samples of X.
+    """
     assert samples.ndim == 1
-    return estimate_mean_of_normal_from_samples(samples, confidence) * samples.shape[0]
+    return estimate_expectancy_of_normal_from_samples(samples, confidence) * samples.shape[0]
 
 
-def estimate_mean_of_normal_from_samples(samples: np.ndarray, confidence: float) -> ScoreEstimate:
+def estimate_expectancy_of_normal_from_samples(samples: np.ndarray, confidence: float) -> ScoreEstimate:
     """
     Estimates the mean of a normal variable X given samples of X.
 
     Gives a symmetric range around the "naive" estimation, which is average(X)
-    :param confidence: A number between 0 to 1. The estimation is correct with the given confidence.
+
+    :param samples: Independent samples of a normal variable X.
+    :param confidence: A number between 0 to 1.
+    The estimation is correct with the given confidence.
     I.e., if we define a normal variable X, and call this function 100000 times,
     with samples of X (different samples every time) and confidence=0.9 -
-    then in 0.9 of the times, the real mean of X will be in the output range.
+    then in 0.9 of the times, the real mean of X will be in the estimated output range.
     """
     assert samples.ndim == 1
     avg = np.average(samples)

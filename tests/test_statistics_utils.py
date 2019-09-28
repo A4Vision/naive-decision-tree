@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from tree.optimized_train.statistics_utils import estimate_mean_of_normal_from_samples
+from tree.optimized_train.statistics_utils import estimate_expectancy_of_normal_from_samples
 
 
 def test_estimate_normal():
@@ -14,7 +14,7 @@ def test_estimate_normal():
             N = 2 ** 9
             for _ in range(N):
                 samples = np.random.normal(avg, std, size=n)
-                estimate = estimate_mean_of_normal_from_samples(samples, confidence)
+                estimate = estimate_expectancy_of_normal_from_samples(samples, confidence)
                 is_estimation_correct = (estimate.lower_bound < avg < estimate.upper_bound)
                 count_correct += int(is_estimation_correct)
             print(confidence, count_correct / N)

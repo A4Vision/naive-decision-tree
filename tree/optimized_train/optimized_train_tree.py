@@ -8,7 +8,7 @@ from tree.naive_train.train_tree import select_decision_rule
 from tree.optimized_train.data_view import NodeTrainDataView
 from tree.optimized_train.params_for_optimized import _set_defaults, print_expected_execution_statistics
 from tree.optimized_train.statistics_utils import ScoreEstimate, \
-    estimate_sum_of_normal_samples_as_normal
+    estimate_expectancy_of_sum_of_normal
 from tree.optimized_train.value_to_bins import ValuesToBins
 
 
@@ -77,7 +77,8 @@ def select_decision_rule_using_pruning(data_view: NodeTrainDataView, params: Dic
                             estimation.lower_bound <= lowest_upper_bound]
         print('len(current_features)', len(current_features), current_features)
 
-    assert len(current_features) == 1
+    best_feature_by_value = min([(e.value, f) for f, e in feature_estimations])[1]
+    current_features = np.array([best_feature_by_value])
     all_rows = np.arange(data_view.n_rows())
     rule = select_decision_rule(data_view.features_values(current_features, all_rows),
                                 data_view.residue_values(all_rows), params)
@@ -153,10 +154,10 @@ class ScoresCalculator:
                             score_right: float) -> ScoreEstimate:
         b = values <= bin_value
         left_y = self._y[b]
-        left_estimate = estimate_sum_of_normal_samples_as_normal(
+        left_estimate = estimate_expectancy_of_sum_of_normal(
             (left_y - np.average(left_y)) ** 2, 0.9)
         right_y = self._y[~b]
-        right_estimate = estimate_sum_of_normal_samples_as_normal(
+        right_estimate = estimate_expectancy_of_sum_of_normal(
             (right_y - np.average(right_y)) ** 2, 0.9)
         # print('length', len(left_y))
         # print('i', bin_value)
