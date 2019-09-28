@@ -10,7 +10,7 @@ from tree.optimized_train.data_view import NodeTrainDataView
 from tree.optimized_train.scores_calculator import calculate_features_scores, ScoresCalculator
 
 
-MINIMAL_ROWS_AMOUNT = 30
+MINIMAL_ROWS_AMOUNT = 100
 
 
 class DecisionRuleSelector(metaclass=abc.ABCMeta):
@@ -47,7 +47,6 @@ class ScheduledPruningSelector(DecisionRuleSelector):
 
             next_features_amount = int(np.round(next_k_i * data_view.k_features()))
             current_features = get_top_by_scores(current_features, features_scores, next_features_amount)
-        assert len(current_features) == 1
         all_rows = np.arange(data_view.n_rows())
 
         temp_params = {}
@@ -66,6 +65,7 @@ class DynamicPruningSelector(DecisionRuleSelector):
 
     def select_decision_rule(self, data_view: NodeTrainDataView) -> Optional[SimpleDecisionRule]:
         current_features = np.arange(data_view.k_features())
+        best_feature_by_value = current_features[0]
 
         for r_i in self._lines_sample_ratios:
             rows_amount = int(np.ceil(r_i * data_view.n_rows()))
@@ -78,15 +78,19 @@ class DynamicPruningSelector(DecisionRuleSelector):
 
             y = data_view.residue_values(rows)
             scores_calc = ScoresCalculator(bins, y)
-            print(current_features.max(), scores_calc._k)
-            feature_estimations = [(feature, scores_calc.estimate_score(i, 0.95))
+            feature_estimations = [(feature, scores_calc.estimate_score(i, 0.8))
                                    for i, feature in enumerate(current_features)]
+            feature_estimations = list(filter(lambda f_e: f_e[1].is_valid(), feature_estimations))
+            if not feature_estimations:
+                best_feature_by_value = current_features[0]
+                break
             print('estimations of best', sorted(feature_estimations, key=lambda x: x[1].value)[:5])
             lowest_upper_bound = min([estimation.upper_bound for feature, estimation in feature_estimations])
             current_features = np.array([feature for feature, estimation in feature_estimations if
                                          estimation.lower_bound <= lowest_upper_bound])
+            best_feature_by_value = min([(e.value, f) for f, e in feature_estimations])[1]
 
-        best_feature_by_value = min([(e.value, f) for f, e in feature_estimations])[1]
+
         current_features = np.array([best_feature_by_value])
         all_rows = np.arange(data_view.n_rows())
 

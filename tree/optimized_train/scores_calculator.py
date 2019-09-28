@@ -5,11 +5,11 @@ from tree.optimized_train.statistics_utils import ScoreEstimate, estimate_expect
 
 
 def safe_estimate_expectancy_of_sum_of_non_normal(samples, confidence):
-    if samples.shape[0] < 20:
-        # This is a lie ! Temporary workaround - so we don't ned to handle very small sampling sizes.
-        return estimate_expectancy_of_sum_of_normal(samples, confidence)
-    else:
-        return estimate_expectancy_of_sum_of_non_normal(samples, confidence, 10)
+    # if samples.shape[0] < 20:
+    # This is a lie ! Temporary workaround - so we don't ned to handle very small sampling sizes.
+    return estimate_expectancy_of_sum_of_normal(samples, confidence)
+    # else:
+    #     return estimate_expectancy_of_sum_of_non_normal(samples, confidence, 10)
 
 
 class ScoresCalculator:
