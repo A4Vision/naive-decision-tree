@@ -1,6 +1,15 @@
 import numpy as np
 
-from tree.optimized_train.statistics_utils import ScoreEstimate, estimate_expectancy_of_sum_of_normal
+from tree.optimized_train.statistics_utils import ScoreEstimate, estimate_expectancy_of_sum_of_normal, \
+    estimate_expectancy_of_sum_of_non_normal
+
+
+def safe_estimate_expectancy_of_sum_of_non_normal(samples, confidence):
+    if samples.shape[0] < 20:
+        # This is a lie ! Temporary workaround - so we don't ned to handle very small sampling sizes.
+        return estimate_expectancy_of_sum_of_normal(samples, confidence)
+    else:
+        return estimate_expectancy_of_sum_of_non_normal(samples, confidence, 10)
 
 
 class ScoresCalculator:
@@ -41,23 +50,16 @@ class ScoresCalculator:
         else:
             scores_sum[~np.isfinite(scores_sum)] = np.nan
             i = np.nanargmin(scores_sum)
-            return self._calculate_estimate(values, i, scores_left[i], scores_right[i], confidence)
+            return self._calculate_estimate(values, i, confidence)
 
-    def _calculate_estimate(self, values: np.ndarray, bin_value: int, score_left: float, score_right: float,
-                            confidence: float) -> ScoreEstimate:
-        # TODO(assaf): Remove the arguments score_left and score_right
+    def _calculate_estimate(self, values: np.ndarray, bin_value: int, confidence: float) -> ScoreEstimate:
         b = values <= bin_value
         left_y = self._y[b]
-        left_estimate = estimate_expectancy_of_sum_of_normal(
+        left_estimate = safe_estimate_expectancy_of_sum_of_non_normal(
             (left_y - np.average(left_y)) ** 2, confidence)
         right_y = self._y[~b]
-        right_estimate = estimate_expectancy_of_sum_of_normal(
+        right_estimate = safe_estimate_expectancy_of_sum_of_non_normal(
             (right_y - np.average(right_y)) ** 2, confidence)
-        # print('length', len(left_y))
-        # print('i', bin_value)
-        # print('values', left_estimate.value, score_left)
-        assert abs(left_estimate.value - score_left) < 0.0001
-        assert abs(right_estimate.value - score_right) < 0.0001
         return right_estimate + left_estimate
 
 

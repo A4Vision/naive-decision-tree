@@ -28,8 +28,16 @@ class ScoreEstimate(NamedTuple):
                                  self.lower_bound + other,
                                  self.upper_bound + other)
 
-    def __str__(self):
-        return f"Estimate(mean={self.value},range=[{self.lower_bound}, {self.upper_bound}])"
+    def __repr__(self):
+        percision = _percision(self.lower_bound, self.upper_bound)
+        return f"Estimate(mean={self.value:.{percision}f}," \
+            f"range=[{self.lower_bound:.{percision}f}, {self.upper_bound:.{percision}f}])"
+
+
+def _percision(f1: float, f2: float):
+    if f1 == f2:
+        return 2
+    return max(int(round(np.log10(1 / abs(f1 - f2)))), 1)
 
 
 def chunkify_padded(arr: np.ndarray, chunk_size: int) -> np.ndarray:
@@ -37,15 +45,17 @@ def chunkify_padded(arr: np.ndarray, chunk_size: int) -> np.ndarray:
     Pads the array with its mean so its length is a multiple of chunk_size,
     then splits the array to chunks of length chunk_size.
     """
-    # TODO(shugybugy): optimize this point - we copy the whole array just to extend with average.
-    arr = np.pad(arr, (0, arr.shape[0] % chunk_size), mode='mean')
+    # TODO(Assaf): optimize this point - we copy the whole array just to extend with average.
+    arr = np.pad(arr, (0, chunk_size - arr.shape[0] % chunk_size), mode='mean')
+    # print(arr.shape[0])
     for i in range(arr.shape[0] // chunk_size):
         yield arr[i * chunk_size: (i + 1) * chunk_size]
 
 
 def estimate_expectancy_of_sum_of_non_normal(non_normal_samples: np.ndarray,
-                                             confidence: float, C: int = 10) -> ScoreEstimate:
+                                             confidence: float, C: int) -> ScoreEstimate:
     assert non_normal_samples.ndim == 1
+    assert non_normal_samples.shape[0] >= 2 * C
     # Each sum of a chunk is approximately normal.
     new_samples = np.array([np.sum(chunk) for chunk in chunkify_padded(non_normal_samples, C)])
     return estimate_expectancy_of_sum_of_normal(new_samples, confidence)

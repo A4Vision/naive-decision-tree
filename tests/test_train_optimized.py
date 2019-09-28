@@ -30,9 +30,10 @@ def test_calculate_features_scores():
 
 
 def test_train_tree_optimized():
+    np.random.seed(123)
     x = np.random.normal(size=(50000, 128))
     y = (x.T[7] > 0.1) * 5 + (x.T[2] < 0.01) * 3 + np.random.random(size=(x.shape[0])) * 0.01
-    params = {'max_depth': 2, 'gamma': 0.1}
+    params = {'max_depth': 2, 'gamma': 0.1, 'feature_pruning_method': 'dynamic'}
     rs_log2 = np.array([8, 4., 0])
     ks_log2 = np.array([0., 2, 4])
     params.update({'lines_sample_ratios': 2 ** -rs_log2,
