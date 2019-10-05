@@ -65,6 +65,7 @@ def booster_text(booster: xgboost.Booster):
     return '\n'.join(booster.get_dump())
 
 
+
 def test_train_tree_optimized_level3():
     x = np.random.randint(0, 10, size=(50000, 128)) * 0.1
     y = (x.T[10] > 0.3) * 1 + ((x.T[100] < 0.01) & (x.T[1] + x.T[2] < 0.5)) * 2 + np.random.random(
@@ -90,16 +91,16 @@ def _drop_outliers(values, percent):
     return s[(s >= s.quantile(percent)) &
              (s <= s.quantile(1 - percent))]
 
-Problems occur:
-   * Calculation in deep nodes is in-stable:
-   with few samples, the whole method does not work.
-   * Calculation in deep nodes is very expensive, because we cannot differentiate the optimal leaf easily by pruning.
-
-Problems with comparing to xgboost:
- * xgboost does not always split - need to see why, and how to implement
-a similar mechanism.
- *  We get non-comparable performance to xgboost due to binning.
-
- BUG in ValuesToBins -
- when binning many randint(0, 10) the binner crashes.
- Probably need to set the first column of _quantile to a very small value.
+# Problems occur:
+#    * Calculation in deep nodes is in-stable:
+#    with few samples, the whole method does not work.
+#    * Calculation in deep nodes is very expensive, because we cannot differentiate the optimal leaf easily by pruning.
+#
+# Problems with comparing to xgboost:
+#  * xgboost does not always split - need to see why, and how to implement
+# a similar mechanism.
+#  *  We get non-comparable performance to xgboost due to binning.
+#
+#  BUG in ValuesToBins -
+#  when binning many randint(0, 10) the binner crashes.
+#  Probably need to set the first column of _quantile to a very small value.

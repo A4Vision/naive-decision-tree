@@ -17,7 +17,6 @@ class ValuesToBins:
 
     def get_bins(self, x):
         assert x.shape[1] == self._x.shape[1]
-        print(x.shape, self._quantiles.shape, self._quantiles[:,0][:28])
         return np.array([np.digitize(x[:, i], self._quantiles[:, i], True) for i in range(self._x.shape[1])],
                         dtype=np.uint8).T
 

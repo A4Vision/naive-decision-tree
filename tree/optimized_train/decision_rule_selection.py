@@ -78,17 +78,16 @@ class DynamicPruningSelector(DecisionRuleSelector):
 
             y = data_view.residue_values(rows)
             scores_calc = ScoresCalculator(bins, y)
-            feature_estimations = [(feature, scores_calc.estimate_score(i, 0.8))
-                                   for i, feature in enumerate(current_features)]
-            feature_estimations = list(filter(lambda f_e: f_e[1].is_valid(), feature_estimations))
+            feature_estimations = {feature: scores_calc.estimate_score(i, 0.8)
+                                   for i, feature in enumerate(current_features)}
+            feature_estimations = {fe: score for fe, score in feature_estimations.items() if score.is_valid()}
             if not feature_estimations:
-                best_feature_by_value = current_features[0]
                 break
-            print('estimations of best', sorted(feature_estimations, key=lambda x: x[1].value)[:5])
-            lowest_upper_bound = min([estimation.upper_bound for feature, estimation in feature_estimations])
-            current_features = np.array([feature for feature, estimation in feature_estimations if
+            print('estimations of best', sorted(feature_estimations.values(), key=lambda x: x.value)[:5])
+            lowest_upper_bound = min([estimation.upper_bound for estimation in feature_estimations.values()])
+            current_features = np.array([feature for feature, estimation in feature_estimations.items() if
                                          estimation.lower_bound <= lowest_upper_bound])
-            best_feature_by_value = min([(e.value, f) for f, e in feature_estimations])[1]
+            best_feature_by_value = min([(e.value, f) for f, e in feature_estimations.items()])[1]
 
 
         current_features = np.array([best_feature_by_value])
