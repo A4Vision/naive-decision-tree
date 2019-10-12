@@ -10,14 +10,16 @@ class ValuesToBins:
         self._max_values = self._x.max(axis=0)
         self._n_bins = n_bins
         self._quantiles = self._calculate_quantiles()
-        assert self._quantiles.shape == (n_bins, x.shape[1])
+        assert self._quantiles.shape == (x.shape[1], n_bins)
 
     def _calculate_quantiles(self):
-        return np.percentile(self._x, 100 * np.arange(self._n_bins) / self._n_bins, axis=0)
+        return np.array([np.sort(np.percentile(v,
+                              100 * np.arange(self._n_bins) / self._n_bins))
+                         for v in self._x.T])
 
     def get_bins(self, x):
         assert x.shape[1] == self._x.shape[1]
-        return np.array([np.digitize(x[:, i], self._quantiles[:, i], True) for i in range(self._x.shape[1])],
+        return np.array([np.digitize(x[:, i], self._quantiles[i], True) for i in range(self._x.shape[1])],
                         dtype=np.uint8).T
 
     def convert_to_values_rule(self, bins_rule: SimpleDecisionRule) -> SimpleDecisionRule:
@@ -25,7 +27,7 @@ class ValuesToBins:
         if bins_rule.get_bound() == self._n_bins:
             bound = self._max_values[i]
         else:
-            bound = self._quantiles[bins_rule.get_bound(), i]
+            bound = self._quantiles[i, bins_rule.get_bound()]
         return SimpleDecisionRule(bound, i)
 
     def convert_bins_tree_to_prediction_tree(self, tree_trained_on_bins: DecisionTree) -> DecisionTree:
@@ -33,4 +35,4 @@ class ValuesToBins:
         return DecisionTree(converted_root)
 
     def bins_counts(self):
-        return [len(set(self._quantiles[:, i])) for i in range(self._quantiles.shape[1])]
+        return [len(set(self._quantiles[i])) for i in range(self._quantiles.shape[0])]

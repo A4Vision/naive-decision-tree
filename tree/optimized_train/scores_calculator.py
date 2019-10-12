@@ -4,14 +4,6 @@ from tree.optimized_train.statistics_utils import ScoreEstimate, estimate_expect
     estimate_expectancy_of_sum_of_non_normal
 
 
-def safe_estimate_expectancy_of_sum_of_non_normal(samples, confidence):
-    if samples.shape[0] < 20:
-        # This is a lie ! Temporary workaround - so we don't ned to handle very small sampling sizes.
-        return estimate_expectancy_of_sum_of_normal(samples, confidence)
-    else:
-        return estimate_expectancy_of_sum_of_non_normal(samples, confidence, 10)
-
-
 class ScoresCalculator:
     def __init__(self, bins: np.ndarray, y: np.ndarray):
         assert bins.shape[0] == y.shape[0]
@@ -55,10 +47,10 @@ class ScoresCalculator:
     def _calculate_estimate(self, values: np.ndarray, bin_value: int, confidence: float) -> ScoreEstimate:
         b = values <= bin_value
         left_y = self._y[b]
-        left_estimate = safe_estimate_expectancy_of_sum_of_non_normal(
+        left_estimate = estimate_expectancy_of_sum_of_normal(
             (left_y - np.average(left_y)) ** 2, confidence)
         right_y = self._y[~b]
-        right_estimate = safe_estimate_expectancy_of_sum_of_non_normal(
+        right_estimate = estimate_expectancy_of_sum_of_normal(
             (right_y - np.average(right_y)) ** 2, confidence)
         return right_estimate + left_estimate
 

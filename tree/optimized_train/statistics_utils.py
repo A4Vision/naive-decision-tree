@@ -33,11 +33,14 @@ class ScoreEstimate(NamedTuple):
         return f"Estimate(mean={self.value:.{percision}f}," \
             f"range=[{self.lower_bound:.{percision}f}, {self.upper_bound:.{percision}f}])"
 
+    def is_valid(self):
+        return np.isfinite(self.value) and np.isfinite(self.lower_bound) and np.isfinite(self.upper_bound)
+
 
 def _percision(f1: float, f2: float):
     if f1 == f2:
         return 2
-    return max(int(round(np.log10(1 / abs(f1 - f2)))), 1)
+    return max(int(round(np.log10(1 / abs(f1 - f2)))), 1) + 1
 
 
 def chunkify_padded(arr: np.ndarray, chunk_size: int) -> np.ndarray:
