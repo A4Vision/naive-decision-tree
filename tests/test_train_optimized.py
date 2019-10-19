@@ -34,9 +34,8 @@ def test_calculate_features_scores():
         assert np.max(error) < 0.0001
 
 
-def _test_train_tree_optimized(x, y, **params_args):
+def _test_train_tree_optimized(x, y, validate=True, **params_args):
     params = {'max_depth': 5, 'gamma': 0.0001, 'feature_pruning_method': 'dynamic'}
-    # rs_log2 = np.array([8, 4., 0])
     rs_log2 = np.array([8, 4., 0])
     ks_log2 = np.array([0., 2, 4])
     params.update({'lines_sample_ratios': 2 ** -rs_log2,
@@ -48,7 +47,8 @@ def _test_train_tree_optimized(x, y, **params_args):
     diff = prediction - y
     clean_diff = _drop_outliers(diff, 0.005)
     print('average squared residue', np.average(clean_diff ** 2))
-    # assert np.abs(clean_diff).max() < 0.1
+    if validate:
+        assert np.abs(clean_diff).max() < 0.1
 
 
 def test_train_tree_optimized_level1():
@@ -63,13 +63,12 @@ def test_train_tree_optimized_level2():
     _test_train_tree_optimized(x, y)
 
 
-
 def test_train_tree_optimized_level3():
     x = np.random.randint(0, 10, size=(20000, 128)) * 0.1
     y = (x.T[10] > 0.3) * 1 + ((x.T[100] < 0.01) & (x.T[1] + x.T[2] < 0.5)) * 2 + np.random.random(
         size=(x.shape[0])) * 0.01
     t = time.time()
-    _test_train_tree_optimized(x, y, max_depth=4)
+    _test_train_tree_optimized(x, y, max_depth=4, validate=False)
     my_runtime = time.time() - t
     t = time.time()
     regressor = xgboost.XGBRegressor(gamma=0., max_depth=5, learning_rate=1., base_score=0.5,
