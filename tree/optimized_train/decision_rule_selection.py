@@ -5,10 +5,10 @@ import numpy as np
 
 from tree.descision_tree import SimpleDecisionRule
 from tree.naive_train import train_tree
+from tree.naive_train.optimal_cut import calc_score, find_cut_naive_given_discrete
 from tree.naive_train.train_tree import select_decision_rule
 from tree.optimized_train.data_view import NodeTrainDataView
 from tree.optimized_train.scores_calculator import calculate_features_scores, ScoresCalculator
-
 
 MINIMAL_ROWS_AMOUNT = 100
 
@@ -47,7 +47,7 @@ class ScheduledPruningSelector(DecisionRuleSelector):
 
             next_features_amount = int(np.round(next_k_i * data_view.k_features()))
             current_features = get_top_by_scores(current_features, features_scores, next_features_amount)
-        all_rows = np.arange(data_view.n_rows())
+        all_rows = data_view.get_all_rows()
 
         temp_params = {}
         train_tree._set_defaults(temp_params)
@@ -55,6 +55,27 @@ class ScheduledPruningSelector(DecisionRuleSelector):
         rule = select_decision_rule(data_view.features_values(current_features, all_rows),
                                     data_view.residue_values(all_rows), temp_params)
         return SimpleDecisionRule(rule.get_bound(), current_features[0])
+
+
+def optimal_decision_rule_for_feature(best_feature_by_value, data_view) -> \
+        Optional[SimpleDecisionRule]:
+    all_rows = data_view.get_all_rows()
+    x = data_view.features_values(np.array([best_feature_by_value]), all_rows)
+    y = data_view.residue_values(all_rows)
+    cut = naive_select_cut_discrete(x.T[0], y)
+    if cut is None:
+        return None
+    return SimpleDecisionRule(cut, best_feature_by_value)
+
+
+def naive_select_cut_discrete(x, y) -> Optional[int]:
+    no_split_score = calc_score(y, 0)
+    bound, score = find_cut_naive_given_discrete(y, x, 0)
+    if score >= no_split_score:
+        # Better not to split at this point
+        return None
+    else:
+        return bound
 
 
 class DynamicPruningSelector(DecisionRuleSelector):
@@ -65,7 +86,7 @@ class DynamicPruningSelector(DecisionRuleSelector):
 
     def select_decision_rule(self, data_view: NodeTrainDataView) -> Optional[SimpleDecisionRule]:
         current_features = np.arange(data_view.k_features())
-        best_feature_by_value = current_features[0]
+        best_feature_by_value = None
 
         for r_i in self._lines_sample_ratios:
             rows_amount = int(np.ceil(r_i * data_view.n_rows()))
@@ -89,15 +110,9 @@ class DynamicPruningSelector(DecisionRuleSelector):
                                          estimation.lower_bound <= lowest_upper_bound])
             best_feature_by_value = min([(e.value, f) for f, e in feature_estimations.items()])[1]
 
-
-        current_features = np.array([best_feature_by_value])
-        all_rows = np.arange(data_view.n_rows())
-
-        temp_params = {}
-        train_tree._set_defaults(temp_params)
-        rule = select_decision_rule(data_view.features_values(current_features, all_rows),
-                                    data_view.residue_values(all_rows), temp_params)
-        return SimpleDecisionRule(rule.get_bound(), current_features[0])
+        if best_feature_by_value is None:
+            return None
+        return optimal_decision_rule_for_feature(best_feature_by_value, data_view)
 
 
 def get_top_by_scores(values: np.ndarray, scores: np.ndarray, k: int) -> np.ndarray:

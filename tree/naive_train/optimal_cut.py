@@ -20,7 +20,7 @@ def find_cut_naive_given_discrete(values, discrete, gamma):
     scores = scores_naive(sorted_values, gamma)[1:]
     scores[np.diff(sorted(discrete)) == 0] = np.inf
     i = np.argmin(scores)
-    return i + 1, scores[i]
+    return np.sort(discrete)[i], scores[i]
 
 
 def scores_naive(values, gamma):

@@ -50,3 +50,6 @@ class NodeTrainDataView:
         left_rows = self._rows[~decision]
         right_rows = self._rows[decision]
         return NodeTrainDataView(self._x, self._y, left_rows), NodeTrainDataView(self._x, self._y, right_rows)
+
+    def get_all_rows(self) -> np.ndarray:
+        return self._rows.copy()

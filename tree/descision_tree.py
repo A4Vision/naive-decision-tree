@@ -103,21 +103,20 @@ class DecisionNode(Node):
 
     def __str__(self):
         return f"""Decision({self._decision_rule})
-            {self._tabify(str(self._left))}
-            Or
-            {self._tabify(str(self._right))}"""
+{self._tabify(str(self._left))}
+{self._tabify(str(self._right))}"""
 
 
 class DecisionTree:
     def __init__(self, root_node: Node):
         self._root = root_node
 
-    def predict(self, vals):
+    def _predict_single(self, vals):
         return self._root.predict(vals)
 
     def predict_many(self, vals: np.array):
         assert vals.ndim == 2
-        return list(map(self.predict, vals))
+        return list(map(self._predict_single, vals))
 
     def root(self):
         return self._root
