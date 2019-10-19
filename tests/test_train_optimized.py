@@ -74,8 +74,8 @@ def test_train_tree_optimized_level3():
 
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
 
-    depth = 4
-    _compare_xgboost_with_my_implementation(x_train, x_train, y_train, y_train, depth)
+    depth = 3
+    _compare_xgboost_with_my_implementation(x_train, x_test, y_train, y_test, depth)
 
 
 def _compare_xgboost_with_my_implementation(x_train, x_test, y_train, y_test,
