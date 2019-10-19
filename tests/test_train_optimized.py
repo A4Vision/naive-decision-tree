@@ -1,11 +1,13 @@
 import time
+from typing import List
 
 import numpy as np
 import pandas as pd
 import xgboost
+import re
 
 from tree.naive_train.optimal_cut import find_cut_naive_given_discrete
-from tree.optimized_train import optimized_train_tree
+from tree.optimized_train import optimized_train_tree, utils
 from tree.optimized_train.decision_rule_selection import get_top_by_scores
 from tree.optimized_train.scores_calculator import calculate_features_scores
 from tree.optimized_train.value_to_bins import ValuesToBins
@@ -32,14 +34,14 @@ def test_calculate_features_scores():
         assert np.max(error) < 0.0001
 
 
-def _test_train_tree_optimized(x, y):
+def _test_train_tree_optimized(x, y, **params_args):
     params = {'max_depth': 5, 'gamma': 0.0001, 'feature_pruning_method': 'dynamic'}
     # rs_log2 = np.array([8, 4., 0])
     rs_log2 = np.array([8, 4., 0])
     ks_log2 = np.array([0., 2, 4])
     params.update({'lines_sample_ratios': 2 ** -rs_log2,
                    'features_sample_ratios': 2 ** -ks_log2})
-
+    params.update(params_args)
     tree = optimized_train_tree.train(x, y, params)
     print(tree.root())
     prediction = tree.predict_many(x)
@@ -61,27 +63,46 @@ def test_train_tree_optimized_level2():
     _test_train_tree_optimized(x, y)
 
 
-def booster_text(booster: xgboost.Booster):
-    return '\n'.join(booster.get_dump())
-
 
 def test_train_tree_optimized_level3():
-    x = np.random.randint(0, 10, size=(50000, 128)) * 0.1
+    x = np.random.randint(0, 10, size=(20000, 128)) * 0.1
     y = (x.T[10] > 0.3) * 1 + ((x.T[100] < 0.01) & (x.T[1] + x.T[2] < 0.5)) * 2 + np.random.random(
         size=(x.shape[0])) * 0.01
     t = time.time()
-    _test_train_tree_optimized(x, y)
-    print('my runtime', time.time() - t)
+    _test_train_tree_optimized(x, y, max_depth=4)
+    my_runtime = time.time() - t
     t = time.time()
-    regressor = xgboost.XGBRegressor(max_depth=5, learning_rate=1.,
-                                     n_estimators=1, reg_lambda=0., min_child_weight=0)
+    regressor = xgboost.XGBRegressor(gamma=0., max_depth=5, learning_rate=1., base_score=0.5,
+                                     n_estimators=1, reg_lambda=0.,
+                                     min_child_weight=0,
+                                     tree_method='exact',
+                                     **{'lambda': 0})
     regressor.fit(x, y)
-    print('xgboost runtime', time.time() - t)
-    print(booster_text(regressor.get_booster()))
+    xgboost_runtime = time.time() - t
 
     diff = y - regressor.predict(x)
     clean_diff = _drop_outliers(diff, 0.005)
+    print(utils.booster_text(regressor.get_booster(), 0.5))
+    print('my runtime', my_runtime)
+    print('xgboost runtime', xgboost_runtime)
     print('average squared residue by xgboost', np.average(clean_diff ** 2))
+
+
+def show_xgboost_does_not_implement_fast_pruning():
+    times = []
+    ns = range(20000, 100000, 10000)
+    for n in ns:
+        x = np.random.randint(0, 10, size=(n, 128)) * 0.1
+        y = (x.T[10] > 0.3) * 1 + ((x.T[100] < 0.01) & (x.T[1] + x.T[2] < 0.5)) * 2 + np.random.random(
+            size=(x.shape[0])) * 0.01
+        t = time.time()
+        regressor = xgboost.XGBRegressor(max_depth=2, learning_rate=1., base_score=0.5,
+                                         n_estimators=1, reg_lambda=0., min_child_weight=0)
+        regressor.fit(x, y)
+        xgboost_runtime = time.time() - t
+        times.append(xgboost_runtime)
+    print(times)
+    print(list(ns))
 
 
 def _drop_outliers(values, percent):
@@ -99,7 +120,3 @@ def _drop_outliers(values, percent):
 #  * xgboost does not always split - need to see why, and how to implement
 # a similar mechanism.
 #  *  We get non-comparable performance to xgboost due to binning.
-#
-#  BUG in ValuesToBins -
-#  when binning many randint(0, 10) the binner crashes.
-#  Probably need to set the first column of _quantile to a very small value.
