@@ -6,7 +6,7 @@ import pytest
 import xgboost
 from sklearn.model_selection import train_test_split
 
-from tree.naive_train.optimal_cut import find_cut_naive_given_discrete, calc_score
+from tree.naive_train.optimal_cut import find_cut_naive_given_discrete
 from tree.optimized_train import optimized_train_tree, utils
 from tree.optimized_train.decision_rule_selection import get_top_by_scores
 from tree.optimized_train.scores_calculator import calculate_features_scores
@@ -41,13 +41,13 @@ def _test_train_tree_optimized(x, y, validate=True, **params_args):
     params.update({'lines_sample_ratios': 2 ** -rs_log2,
                    'features_sample_ratios': 2 ** -ks_log2})
     params.update(params_args)
-    tree = optimized_train_tree.train(x, y, params)
+    tree, selector = optimized_train_tree.train(x, y, params)
     prediction = tree.predict_many(x)
     diff = prediction - y
     clean_diff = _drop_outliers(diff, 0.005)
     if validate:
         assert np.abs(clean_diff).max() < 0.1
-    return tree
+    return tree, selector
 
 
 def test_train_tree_optimized_level1():
@@ -81,13 +81,14 @@ def test_train_tree_optimized_level3():
 def _compare_xgboost_with_my_implementation(x_train, x_test, y_train, y_test,
                                             depth):
     t = time.time()
-    my_regressor = _test_train_tree_optimized(x_train, y_train, max_depth=depth, validate=False)
+    my_regressor, selector = _test_train_tree_optimized(x_train, y_train, max_depth=depth, validate=False)
     my_runtime = time.time() - t
     my_diff = get_average_diff(y_test, my_regressor.predict_many(x_test))
 
     t = time.time()
+    base_score = np.average(y_train)
     xgboost_regressor = xgboost.XGBRegressor(gamma=0., max_depth=depth,
-                                             learning_rate=1., base_score=0.5,
+                                             learning_rate=1., base_score=base_score,
                                              n_estimators=1, reg_lambda=0.,
                                              min_child_weight=0,
                                              tree_method='exact',
@@ -96,13 +97,13 @@ def _compare_xgboost_with_my_implementation(x_train, x_test, y_train, y_test,
     xgboost_runtime = time.time() - t
     xgboost_diff = get_average_diff(y_test, xgboost_regressor.predict(x_test))
     print(my_regressor.root())
-    print(utils.booster_text(xgboost_regressor.get_booster(), 0.5))
+    print(utils.booster_text(xgboost_regressor.get_booster(), base_score))
     print('xgboost runtime', xgboost_runtime)
     print('my      runtime', my_runtime)
     print('xgboost avg squared residue', xgboost_diff)
     print('my      avg squared residue', my_diff)
     assert pytest.approx(xgboost_diff, rel=0.05) == my_diff
-
+    return selector
 
 def show_xgboost_does_not_implement_fast_pruning():
     times = []

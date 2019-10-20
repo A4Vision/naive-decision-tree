@@ -13,14 +13,14 @@ from tree.optimized_train.value_to_bins import ValuesToBins
 
 def _create_selector(params: Dict) -> DecisionRuleSelector:
     if params['feature_pruning_method'] == 'dynamic':
-        return DynamicPruningSelector(params['lines_sample_ratios'])
+        return DynamicPruningSelector(params['lines_sample_ratios'], params['confidence'])
     elif params['feature_pruning_method'] == 'scheduled':
         return ScheduledPruningSelector(params['features_sample_ratios'], params['lines_sample_ratios'])
     else:
         raise ValueError("Invalid pruning method: " + str(params['feature_pruning_method']))
 
 
-def train(x, y, params) -> DecisionTree:
+def train(x, y, params) -> (DecisionTree, DecisionRuleSelector):
     assert y.shape[0] > 0
     assert y.shape[0] == x.shape[0]
     params_copy = copy.deepcopy(params)
@@ -31,8 +31,9 @@ def train(x, y, params) -> DecisionTree:
     assert binned_x.dtype == np.uint8, binned_x.dtype
     assert binned_x.shape == x.shape
     binned_data_view = NodeTrainDataView(binned_x, y, np.arange(binned_x.shape[0]))
-    tree = train_on_binned(binned_data_view, _create_selector(params_copy), params_copy)
-    return converter.convert_bins_tree_to_prediction_tree(tree)
+    selector = _create_selector(params_copy)
+    tree = train_on_binned(binned_data_view, selector, params_copy)
+    return converter.convert_bins_tree_to_prediction_tree(tree), selector
 
 
 def train_on_binned(data_view: NodeTrainDataView, decision_rule_select: DecisionRuleSelector,

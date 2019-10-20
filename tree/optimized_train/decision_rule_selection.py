@@ -8,6 +8,7 @@ from tree.naive_train import train_tree
 from tree.naive_train.optimal_cut import calc_score, find_cut_naive_given_discrete
 from tree.naive_train.train_tree import select_decision_rule
 from tree.optimized_train.data_view import NodeTrainDataView
+from tree.optimized_train.runtime_stats import RuntimeStats
 from tree.optimized_train.scores_calculator import calculate_features_scores, ScoresCalculator
 
 MINIMAL_ROWS_AMOUNT = 100
@@ -79,12 +80,19 @@ def naive_select_cut_discrete(x, y) -> Optional[int]:
 
 
 class DynamicPruningSelector(DecisionRuleSelector):
-    def __init__(self, lines_sample_ratios: List[float]):
+    def __init__(self, lines_sample_ratios: List[float], confidence: float):
+        self._confidence = confidence
         assert lines_sample_ratios[-1] == 1.
 
         self._lines_sample_ratios = list(lines_sample_ratios)
+        self._runtime_stats = None
 
     def select_decision_rule(self, data_view: NodeTrainDataView) -> Optional[SimpleDecisionRule]:
+        shape = (data_view.n_rows(), data_view.k_features())
+        if self._runtime_stats is None:
+            self._runtime_stats = RuntimeStats(shape)
+        self._runtime_stats.start_decision_rule_calculation(shape)
+
         current_features = np.arange(data_view.k_features())
         best_feature_by_value = None
 
@@ -95,11 +103,12 @@ class DynamicPruningSelector(DecisionRuleSelector):
             rows = data_view.sample_rows(rows_amount)
             bins = data_view.features_values(current_features, rows)
             print('data-size', bins.shape)
+            self._runtime_stats.record_iteration(bins.shape)
             assert bins.shape == (rows.shape[0], len(current_features))
 
             y = data_view.residue_values(rows)
             scores_calc = ScoresCalculator(bins, y)
-            feature_estimations = {feature: scores_calc.estimate_score(i, 0.8)
+            feature_estimations = {feature: scores_calc.estimate_score(i, self._confidence)
                                    for i, feature in enumerate(current_features)}
             feature_estimations = {fe: score for fe, score in feature_estimations.items() if score.is_valid()}
             if not feature_estimations:
@@ -114,6 +123,11 @@ class DynamicPruningSelector(DecisionRuleSelector):
             return None
         return optimal_decision_rule_for_feature(best_feature_by_value, data_view)
 
+    def get_stats(self) -> RuntimeStats:
+        return self._runtime_stats
+
 
 def get_top_by_scores(values: np.ndarray, scores: np.ndarray, k: int) -> np.ndarray:
     return values[np.argsort(scores)][:k]
+
+
