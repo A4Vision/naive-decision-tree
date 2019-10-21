@@ -29,6 +29,7 @@ def test_calculate_features_scores():
         assert bins.shape == x.shape
         scores = calculate_features_scores(bins, y)
         naive_scores = np.array([find_cut_naive_given_discrete(y, bins[:, i], 0)[1] for i in range(x.shape[1])])
+
         assert (scores > naive_scores - 0.00001).all()
         error = (scores - naive_scores) / (naive_scores + scores)
         assert np.max(error) < 0.0001
