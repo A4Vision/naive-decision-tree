@@ -7,17 +7,17 @@ from tree.descision_tree import DecisionTree, LeafNode, combine_two_trees
 from tree.optimized_train.data_view import NodeTrainDataView
 from tree.optimized_train.decision_rule_selection import DecisionRuleSelector, DynamicPruningSelector, \
     ScheduledPruningSelector
-from tree.optimized_train.params_for_optimized import _set_defaults, print_expected_execution_statistics
+from tree.optimized_train.params_for_optimized import _set_defaults, print_expected_execution_statistics, PRUNING_METHOD
 from tree.optimized_train.value_to_bins import ValuesToBins
 
 
 def _create_selector(params: Dict) -> DecisionRuleSelector:
-    if params['feature_pruning_method'] == 'dynamic':
+    if params[PRUNING_METHOD] == DynamicPruningSelector:
         return DynamicPruningSelector(params['lines_sample_ratios'], params['confidence'])
-    elif params['feature_pruning_method'] == 'scheduled':
+    elif params[PRUNING_METHOD] == ScheduledPruningSelector:
         return ScheduledPruningSelector(params['features_sample_ratios'], params['lines_sample_ratios'])
     else:
-        raise ValueError("Invalid pruning method: " + str(params['feature_pruning_method']))
+        raise ValueError("Invalid pruning method: " + str(params[PRUNING_METHOD]))
 
 
 def train(x, y, params) -> (DecisionTree, DecisionRuleSelector):

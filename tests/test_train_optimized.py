@@ -8,7 +8,9 @@ from sklearn.model_selection import train_test_split
 
 from tree.naive_train.optimal_cut import find_cut_naive_given_discrete
 from tree.optimized_train import optimized_train_tree, utils
-from tree.optimized_train.decision_rule_selection import get_top_by_scores
+from tree.optimized_train.decision_rule_selection import get_top_by_scores, ScheduledPruningSelector, \
+    DynamicPruningSelector
+from tree.optimized_train.params_for_optimized import PRUNING_METHOD
 from tree.optimized_train.scores_calculator import calculate_features_scores
 from tree.optimized_train.value_to_bins import ValuesToBins
 
@@ -29,15 +31,16 @@ def test_calculate_features_scores():
         assert bins.shape == x.shape
         scores = calculate_features_scores(bins, y)
         naive_scores = np.array([find_cut_naive_given_discrete(y, bins[:, i], 0)[1] for i in range(x.shape[1])])
+
         assert (scores > naive_scores - 0.00001).all()
         error = (scores - naive_scores) / (naive_scores + scores)
         assert np.max(error) < 0.0001
 
 
 def _test_train_tree_optimized(x, y, validate=True, **params_args):
-    params = {'max_depth': 5, 'gamma': 0.0001, 'feature_pruning_method': 'dynamic'}
-    rs_log2 = np.array([8, 4., 0])
-    ks_log2 = np.array([0., 2, 4])
+    params = {'max_depth': 5, 'gamma': 0.0001, PRUNING_METHOD: DynamicPruningSelector}
+    rs_log2 = np.array([2., 0])
+    ks_log2 = np.array([2., 0])
     params.update({'lines_sample_ratios': 2 ** -rs_log2,
                    'features_sample_ratios': 2 ** -ks_log2})
     params.update(params_args)
@@ -53,7 +56,7 @@ def _test_train_tree_optimized(x, y, validate=True, **params_args):
 def test_train_tree_optimized_level1():
     x = np.random.normal(size=(50000, 128))
     y = (x.T[7] > 0.1) * 5 + (x.T[2] < 0.01) * 3 + np.random.random(size=(x.shape[0])) * 0.01
-    _test_train_tree_optimized(x, y)
+    _test_train_tree_optimized(x, y, feature_pruning_method=ScheduledPruningSelector)
 
 
 def test_train_tree_optimized_level2():

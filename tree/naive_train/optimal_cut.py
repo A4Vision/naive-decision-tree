@@ -17,10 +17,15 @@ def sort_by(x, values):
 
 def find_cut_naive_given_discrete(values, discrete, gamma):
     sorted_values = sort_by(values, discrete)
-    scores = scores_naive(sorted_values, gamma)[1:]
-    scores[np.diff(sorted(discrete)) == 0] = np.inf
+    scores = np.zeros(shape=sorted_values.shape[0]) + np.inf
+    sorted_discrete = sorted(discrete)
+    for i in range(values.shape[0] - 1):
+        if sorted_discrete[i] != sorted_discrete[i + 1]:
+            s1 = calc_score(sorted_values[:i + 1], gamma)
+            s2 = calc_score(sorted_values[i + 1:], gamma)
+            scores[i] = s1 + s2
     i = np.argmin(scores)
-    return np.sort(discrete)[i], scores[i]
+    return sorted_discrete[i], scores[i]
 
 
 def scores_naive(values, gamma):
